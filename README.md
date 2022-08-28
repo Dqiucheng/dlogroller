@@ -10,8 +10,8 @@ go get github.com/Dqiucheng/dlogroller
 
 ```go
 hook, err := dlogroller.New(
-    path.Join("logs", "%Y%m", "%d", "%m-%dT%Haa.log"),
-    10, // 日志大小，0不限制
+    path.Join("logs", "%Y%m", "%d", "%m-%dT%Haa.log"),  // 路径，文件名%H便实现了按每小时分割一次日志
+    10,                                                 // 日志文件最大大小，单位兆，0不限制大小
 )
 ```
 
