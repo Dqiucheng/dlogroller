@@ -32,7 +32,7 @@ func New(fileName string, maxSize int64) (*Roller, error) {
 		return nil, errors.New("filename 不可为空")
 	}
 
-	err := r.openFileName()
+	_, err := r.mkdirAll()
 	if err != nil {
 		return nil, err
 	}
@@ -40,30 +40,38 @@ func New(fileName string, maxSize int64) (*Roller, error) {
 	return r, nil
 }
 
+func (r *Roller) mkdirAll() (os.FileMode, error) {
+	if r.nowOpenFileName == "" {
+		var err error
+		r.patternFileName, err = strftime.New(r.fileName)
+		if err != nil {
+			return 0, errors.New("路径初始化失败")
+		}
+		r.nowOpenFileName = r.patternFileName.FormatString(time.Now())
+	}
+
+	info, err := os.Stat(r.nowOpenFileName)
+	if err == nil {
+		r.size = info.Size()
+		return info.Mode(), nil
+	}
+
+	if os.IsNotExist(err) { // 目录不存在，创建
+		err = os.MkdirAll(filepath.Dir(r.nowOpenFileName), 0755)
+		if err != nil {
+			return 0, fmt.Errorf("创建目录失败: %w", err)
+		}
+	}
+
+	r.size = 0
+	return 0644, nil
+}
+
 func (r *Roller) openFileName() error {
 	if r.file == nil {
-		if r.nowOpenFileName == "" {
-			var err error
-			r.patternFileName, err = strftime.New(r.fileName)
-			if err != nil {
-				return errors.New("路径初始化失败")
-			}
-			r.nowOpenFileName = r.patternFileName.FormatString(time.Now())
-		}
-
-		mode := os.FileMode(0644)
-		info, err := os.Stat(r.nowOpenFileName)
-		if err == nil {
-			mode = info.Mode()
-			r.size = info.Size()
-		} else {
-			if os.IsNotExist(err) { // 目录不存在，创建
-				err = os.MkdirAll(filepath.Dir(r.nowOpenFileName), 0755)
-				if err != nil {
-					return fmt.Errorf("创建目录失败: %w", err)
-				}
-			}
-			r.size = 0
+		mode, err := r.mkdirAll()
+		if err != nil {
+			return err
 		}
 
 		//O_RDONLY int = syscall.O_RDONLY // 只读模式打开文件
@@ -74,7 +82,6 @@ func (r *Roller) openFileName() error {
 		//O_EXCL   int = syscall.O_EXCL   // 和O_CREATE配合使用，文件必须不存在
 		//O_SYNC   int = syscall.O_SYNC   // 打开文件用于同步I/O
 		//O_TRUNC  int = syscall.O_TRUNC  // 如果可能，打开时清空文件
-
 		r.file, err = os.OpenFile(r.nowOpenFileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, mode)
 		if err != nil {
 			return fmt.Errorf("日志文件打开失败: %w", err)
