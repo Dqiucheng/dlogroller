@@ -20,7 +20,8 @@ func SetMaxSize(maxSize int64) Option {
 	})
 }
 
-// SetMaxAge 日志文件最大保存天数
+// SetMaxAge 日志文件最大保存天数，0永久保存。
+// 如果设置，不建议设置太多，避免一次性处理的文件太多造成卡顿
 func SetMaxAge(maxAge int) Option {
 	return optionFunc(func(r *Roller) error {
 		r.maxAge = maxAge
@@ -28,7 +29,9 @@ func SetMaxAge(maxAge int) Option {
 	})
 }
 
-// SetMillEveryDayHour 每日N点开始执行陈旧文件处理
+// SetMillEveryDayHour 每日N点开始执行陈旧文件处理。
+// 陈旧文件含义建立在maxAge参数之上，当maxAge为0时不会触发。
+// 文件处理以日志根路径为基础
 func SetMillEveryDayHour(hour int) Option {
 	return optionFunc(func(r *Roller) error {
 		r.millEveryDayHour = hour

@@ -66,7 +66,9 @@ func New(rootPath, formatFileName string, options ...Option) (*Roller, error) {
 		return nil, errors.New("formatFileName 有误，无法识别后缀格式")
 	}
 
-	r.mill()
+	if r.maxAge > 0 {
+		r.mill()
+	}
 	return r, nil
 }
 
